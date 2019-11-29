@@ -3,5 +3,8 @@ Metrics/LineLength:
   Exclude:
     - '*.gemspec'
 
+Metrics/MethodLength:
+  Max: 20
+
 Style/Documentation:
   Enabled: false

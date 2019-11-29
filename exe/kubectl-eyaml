@@ -4,4 +4,4 @@
 require 'kubectl_eyaml'
 
 cmd = "kubectl #{ARGV.join(' ')}"
-KubectlEyaml::Plugin.new.run(cmd)
+exit KubectlEyaml::Plugin.new.run(cmd)

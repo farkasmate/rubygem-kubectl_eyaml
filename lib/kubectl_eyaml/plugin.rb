@@ -1,17 +1,26 @@
 # frozen_string_literal: true
 
+require 'kubectl_eyaml/error'
 require 'open3'
 require 'tmpdir'
 
 module KubectlEyaml
   class Plugin
     def run(cmd)
+      failed = false
+
       Dir.mktmpdir do |dir|
         FileUtils.cp_r('.', dir)
         Dir[File.join(dir, '**', '*.yaml'), File.join(dir, '**', '*.yml')].each { |file| decrypt_file!(file) }
 
-        puts shell_execute(cmd, chdir: dir)
+        begin
+          puts shell_execute(cmd, chdir: dir)
+        rescue ShellError
+          failed = true
+        end
       end
+
+      failed ? 1 : 0
     end
 
     private
@@ -25,7 +34,7 @@ module KubectlEyaml
       output, success = Open3.popen2e(cmd, opts) { |_, outs, thread| [outs.reduce('', &:+), thread.value.success?] }
       unless success
         warn output
-        raise "Shell execution `#{cmd}` failed"
+        raise ShellError, "Shell execution `#{cmd}` failed"
       end
 
       output
