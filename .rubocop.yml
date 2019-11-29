@@ -1,7 +1,7 @@
 Metrics/LineLength:
-  Max: 80
+  Max: 160
   Exclude:
     - '*.gemspec'
 
 Style/Documentation:
-  Enabled: true
+  Enabled: false
