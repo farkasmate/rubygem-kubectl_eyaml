@@ -1,17 +1,34 @@
 # frozen_string_literal: true
 
 require 'open3'
+require 'tmpdir'
 
 module KubectlEyaml
   class Plugin
-    def self.run
-      cmd = "kubectl #{ARGV.join(' ')}"
-      puts cmd
+    def run(cmd)
+      Dir.mktmpdir do |dir|
+        FileUtils.cp_r('.', dir)
+        Dir[File.join(dir, '**', '*.yaml'), File.join(dir, '**', '*.yml')].each { |file| decrypt_file!(file) }
 
-      output, exit_code = Open3.popen2e(cmd) { |_stdin, stdout_and_stderr, wait_thread| [stdout_and_stderr.reduce('', &:+), wait_thread.value.exitstatus] }
+        puts shell_execute(cmd, chdir: dir)
+      end
+    end
 
-      puts output
-      exit exit_code
+    private
+
+    def decrypt_file!(file)
+      cleartext = shell_execute("eyaml decrypt --file #{file}")
+      File.write(file, cleartext)
+    end
+
+    def shell_execute(cmd, opts = {})
+      output, success = Open3.popen2e(cmd, opts) { |_, outs, thread| [outs.reduce('', &:+), thread.value.success?] }
+      unless success
+        warn output
+        raise "Shell execution `#{cmd}` failed"
+      end
+
+      output
     end
   end
 end
