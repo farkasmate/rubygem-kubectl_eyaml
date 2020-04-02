@@ -1,7 +1,11 @@
-Metrics/LineLength:
+Layout/LineLength:
   Max: 160
   Exclude:
     - '*.gemspec'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/*_spec.rb'
 
 Metrics/MethodLength:
   Max: 20

@@ -7,6 +7,8 @@ require 'tmpdir'
 
 module KubectlEyaml
   class Plugin
+    PKCS7_REGEX = %r{^(?<head>.*)(?<crypt>ENC\[PKCS7,(?<blob>[\w+/]*)\])(?<tail>.*)$}.freeze
+
     def run(cmd)
       failed = false
 
@@ -26,15 +28,20 @@ module KubectlEyaml
 
     private
 
-    def decrypt(crypt)
-      blob = /^ENC\[PKCS7,(?<blob>.*)\]$/.match(crypt)[:blob]
+    def decrypt(blob)
       bin = Base64.decode64 blob
       shell_execute('openssl smime -decrypt -inform der -inkey keys/private_key.pkcs7.pem', stdin_data: bin, binmode: true)
     end
 
     def decrypt_file!(file)
-      cleartext = shell_execute("eyaml decrypt --file #{file}")
-      File.write(file, cleartext)
+      clear_lines = File.readlines(file).map do |line|
+        match = PKCS7_REGEX.match(line)
+        next line unless match
+
+        "#{match[:head]}#{decrypt(match[:blob])}#{match[:tail]}"
+      end
+
+      File.write(file, clear_lines.join)
     end
 
     def shell_execute(cmd, opts = {})
