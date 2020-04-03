@@ -7,7 +7,7 @@ require 'tmpdir'
 
 module KubectlEyaml
   class Plugin
-    PKCS7_REGEX = %r{^(?<head>.*)(?<crypt>ENC\[PKCS7,(?<blob>[\w+/]*)\])(?<tail>.*)$}.freeze
+    PKCS7_REGEX = %r{^(?<head>.*)(?<crypt>ENC\[PKCS7,(?<blob>[\w+/=]*)\])(?<tail>.*\n?)$}.freeze
 
     def run(cmd)
       failed = false

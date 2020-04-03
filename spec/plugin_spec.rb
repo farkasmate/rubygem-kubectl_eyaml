@@ -30,9 +30,14 @@ module KubectlEyaml
     context '#decrypt_file!' do
       it 'decrypts encrypted file' do
         Dir.chdir('test') do
-          plugin.send(:decrypt_file!, 'secret.yaml')
-          cleartext = YAML.load_file('secret.yaml')
-          expect(cleartext['stringData']['test-secret']).to be == 's3cr3t'
+          Dir.mktmpdir do |dir|
+            FileUtils.cp_r('.', dir)
+            Dir.chdir(dir) do
+              plugin.send(:decrypt_file!, 'secret.yaml')
+              cleartext = YAML.load_file('secret.yaml')
+              expect(cleartext['stringData']['test-secret']).to be == 's3cr3t'
+            end
+          end
         end
       end
     end
