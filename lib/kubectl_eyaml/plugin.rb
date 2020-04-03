@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
+require 'base64'
 require 'kubectl_eyaml/error'
 require 'open3'
 require 'tmpdir'
 
 module KubectlEyaml
   class Plugin
+    PKCS7_REGEX = %r{^(?<head>.*)(?<crypt>ENC\[PKCS7,(?<blob>[\w+/=]*)\])(?<tail>.*\n?)$}.freeze
+
     def run(cmd)
       failed = false
 
@@ -25,14 +28,25 @@ module KubectlEyaml
 
     private
 
+    def decrypt(blob)
+      bin = Base64.decode64 blob
+      shell_execute('openssl smime -decrypt -inform der -inkey keys/private_key.pkcs7.pem', stdin_data: bin, binmode: true)
+    end
+
     def decrypt_file!(file)
-      cleartext = shell_execute("eyaml decrypt --file #{file}")
-      File.write(file, cleartext)
+      clear_lines = File.readlines(file).map do |line|
+        match = PKCS7_REGEX.match(line)
+        next line unless match
+
+        "#{match[:head]}#{decrypt(match[:blob])}#{match[:tail]}"
+      end
+
+      File.write(file, clear_lines.join)
     end
 
     def shell_execute(cmd, opts = {})
-      output, success = Open3.popen2e(cmd, opts) { |_, outs, thread| [outs.reduce('', &:+), thread.value.success?] }
-      unless success
+      output, status = Open3.capture2e(cmd, opts)
+      unless status.success?
         warn output
         raise ShellError, "Shell execution `#{cmd}` failed"
       end
